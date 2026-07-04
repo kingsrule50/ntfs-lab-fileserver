@@ -22,6 +22,13 @@ The lab demonstrates real-world file server administration including SMB share c
 
 ---
 
+## Architecture
+
+![Lab Architecture](screenshots/00-architecture.png)
+*This lab covers the final phases of the series — domain join, SMB shares, NTFS ACLs, and end-to-end validation.*
+
+---
+
 ## What Gets Configured
 
 ### SMB Shares on FS01
@@ -41,6 +48,9 @@ All shares are hosted at `C:\Shares\` on FS01 and accessible via `\\FS01\<ShareN
 - **IT Override** — GRP_IT has Full Control on all shares for administration
 - **Inheritance Disabled** — explicit permissions only, no inherited access
 - **HR Cross-Access** — GRP_HR has Read access to Finance (cross-department visibility)
+
+![NTFS permissions on Finance](screenshots/01-ntfs-permissions-finance.png)
+*The four department folders under `C:\Shares` on FS01, with the Finance folder's Security tab showing explicit ACEs for GRP_Finance, GRP_HR, and GRP_IT — exactly matching the permission matrix above.*
 
 ---
 
@@ -98,17 +108,29 @@ john.smith  --> \\FS01\IT (Full Control) | all shares accessible
 | \\FS01\Finance | Modify | ✅ Access granted |
 | \\FS01\HR | Denied | ✅ Access denied |
 
+![Sarah Finance granted](screenshots/02-sarah-finance-granted.png)
+*Logged on to CLIENT01 as `lab\sarah.jones` (verified with `whoami`) — full access to `\\FS01\Finance` including a test file.*
+
+![Sarah HR denied](screenshots/03-sarah-hr-denied.png)
+*The same session attempting `\\FS01\hr` — Windows blocks access. Least privilege enforced.*
+
 ### tom.davis (GRP_Sales)
 | Share | Expected | Result |
 |-------|----------|--------|
 | \\FS01\Sales | Modify | ✅ Access granted |
 | \\FS01\Finance | Denied | ✅ Access denied |
 
+![Tom Finance denied](screenshots/04-tom-finance-denied.png)
+*`lab\tom.davis` denied on `\\FS01\Finance` — Sales has no ACE on the Finance folder.*
+
 ### john.smith (GRP_IT)
 | Share | Expected | Result |
 |-------|----------|--------|
 | \\FS01\IT | Full Control | ✅ Access granted |
 | All shares | Full Control | ✅ Access granted |
+
+![John IT access](screenshots/05-john-it-access.png)
+*`lab\john.smith` browsing `\\FS01\it` with full access — the IT administrative override in action.*
 
 ---
 
