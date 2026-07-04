@@ -8,7 +8,7 @@
 
 This is the third and final lab in the series. Building on the Active Directory environment configured in Lab 2, I deploy a **department-based SMB file server** with granular NTFS permissions enforcing least-privilege access control.
 
-The lab demonstrates real-world file server administration including SMB share creation, NTFS permission inheritance, and end-to-end access verification from a domain-joined Windows 11 client.
+I demonstrate real-world file server administration including SMB share creation, NTFS permission inheritance, and end-to-end access verification I perform from a domain-joined Windows 11 client.
 
 ---
 
@@ -25,14 +25,14 @@ The lab demonstrates real-world file server administration including SMB share c
 ## Architecture
 
 ![Lab Architecture](screenshots/00-architecture.png)
-*This lab covers the final phases of the series — domain join, SMB shares, NTFS ACLs, and end-to-end validation.*
+*In this lab I complete the final phases of the series — domain join, SMB shares, NTFS ACLs, and end-to-end validation.*
 
 ---
 
-## What Gets Configured
+## What I Configure
 
 ### SMB Shares on FS01
-All shares are hosted at `C:\Shares\` on FS01 and accessible via `\\FS01\<ShareName>`.
+I host all shares at `C:\Shares\` on FS01 and make them accessible via `\\FS01\<ShareName>`.
 
 ### NTFS Permission Matrix
 
@@ -44,6 +44,7 @@ All shares are hosted at `C:\Shares\` on FS01 and accessible via `\\FS01\<ShareN
 | IT | No Access | No Access | No Access | **Full Control** |
 
 ### Access Control Principles
+I designed the permission model around four principles:
 - **Least Privilege** — users only have access to their department share
 - **IT Override** — GRP_IT has Full Control on all shares for administration
 - **Inheritance Disabled** — explicit permissions only, no inherited access
