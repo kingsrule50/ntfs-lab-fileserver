@@ -6,17 +6,7 @@
 #   - Lab 1 (Azure Infrastructure) must be deployed
 #   - Lab 2 (Active Directory) must be configured
 #
-# USAGE:
-#   Windows (PowerShell 7): .\run-lab3.ps1
-#   macOS/Linux (pwsh):     ./run-lab3.ps1
-#
-#   First run on Windows may require:
-#   Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
-#
-# SECURITY:
-#   No credentials are stored in this repository. The domain admin password
-#   is retrieved at runtime from the Azure Key Vault provisioned by Lab 1
-#   and passed to remote scripts as an execution-time parameter.
+# USAGE: ./run-lab3.ps1
 #
 # This script configures the NTFS file server in phases:
 #   Phase 1 - Domain join CLIENT01 and FS01
@@ -26,18 +16,6 @@
 # =============================================================================
 
 $rg = "RG-FileServerLab"
-
-# --- Retrieve the domain admin password from Key Vault (created by Lab 1) ---
-Write-Host "Retrieving admin credentials from Azure Key Vault..." -ForegroundColor Yellow
-$kvName = az keyvault list --resource-group $rg --query "[0].name" -o tsv
-if (-not $kvName) {
-    throw "No Key Vault found in $rg. Ensure Lab 1 is deployed."
-}
-$adminPassword = az keyvault secret show --vault-name $kvName --name "vm-admin-password" --query "value" -o tsv
-if (-not $adminPassword) {
-    throw "Could not retrieve 'vm-admin-password' from Key Vault '$kvName'. Check your RBAC access (Key Vault Secrets Officer/User)."
-}
-Write-Host "  [+] Credentials retrieved from Key Vault: $kvName" -ForegroundColor Green
 
 function Write-PhaseHeader {
     param([string]$Phase, [string]$Title, [string]$VM = "")
@@ -49,30 +27,15 @@ function Write-PhaseHeader {
 }
 
 function Invoke-VMScript {
-    param(
-        [string]$VMName,
-        [string]$ScriptPath,
-        [string[]]$Parameters = @()
-    )
-    # Resolve to a full path and validate before calling az.
-    # Using az's @file syntax instead of passing the script body as a string:
-    # az reads the file directly, avoiding Windows cmd argument-length limits
-    # and quote-mangling. Works identically on macOS/Linux.
-    $fullPath = (Resolve-Path $ScriptPath -ErrorAction Stop).Path
-    $azArgs = @(
-        "vm", "run-command", "invoke",
-        "--resource-group", $rg,
-        "--name", $VMName,
-        "--command-id", "RunPowerShellScript",
-        "--scripts", "@$fullPath",
-        "--output", "json",
-        "--only-show-errors"
-    )
-    if ($Parameters.Count -gt 0) {
-        $azArgs += "--parameters"
-        $azArgs += $Parameters
-    }
-    $result = az @azArgs | ConvertFrom-Json
+    param([string]$VMName, [string]$ScriptPath)
+    $fullPath = (Resolve-Path $ScriptPath).Path
+    $result = az vm run-command invoke `
+        --resource-group $rg `
+        --name $VMName `
+        --command-id RunPowerShellScript `
+        --scripts "@$fullPath" `
+        --output json `
+        --only-show-errors | ConvertFrom-Json
     $stdout = $result.value | Where-Object { $_.code -like "*StdOut*" } | Select-Object -ExpandProperty message
     $stderr = $result.value | Where-Object { $_.code -like "*StdErr*" } | Select-Object -ExpandProperty message
     if ($stdout) { Write-Host $stdout -ForegroundColor White }
@@ -91,11 +54,11 @@ function Wait-ForNext {
 Write-PhaseHeader -Phase "PHASE 1" -Title "Domain Join CLIENT01 and FS01"
 
 Write-Host "Joining CLIENT01 to lab.local domain..." -ForegroundColor Yellow
-Invoke-VMScript -VMName "CLIENT01" -ScriptPath "./scripts/phase1-domain-join.ps1" -Parameters @("AdminPassword=$adminPassword")
+Invoke-VMScript -VMName "CLIENT01" -ScriptPath "./scripts/phase1-domain-join.ps1"
 
 Write-Host ""
 Write-Host "Joining FS01 to lab.local domain..." -ForegroundColor Yellow
-Invoke-VMScript -VMName "FS01" -ScriptPath "./scripts/phase1-domain-join.ps1" -Parameters @("AdminPassword=$adminPassword")
+Invoke-VMScript -VMName "FS01" -ScriptPath "./scripts/phase1-domain-join.ps1"
 
 Write-Host ""
 Write-Host "Waiting 90s for VMs to reboot and complete domain join..." -ForegroundColor Yellow
@@ -143,7 +106,5 @@ Write-Host " Test Access from CLIENT01:" -ForegroundColor Cyan
 Write-Host "  sarah.jones --> \\FS01\Finance (Modify) \\FS01\HR (Denied)" -ForegroundColor White
 Write-Host "  tom.davis   --> \\FS01\Sales (Modify)   \\FS01\Finance (Denied)" -ForegroundColor White
 Write-Host "  john.smith  --> \\FS01\IT (Full Control) all shares" -ForegroundColor White
-Write-Host ""
-Write-Host " Demo user password (retrieve, do not hardcode):" -ForegroundColor Cyan
-Write-Host "  See Lab 2 documentation for demo user credentials." -ForegroundColor White
+Write-Host "  Password: P@ssw0rd123!" -ForegroundColor White
 Write-Host "============================================================" -ForegroundColor Green

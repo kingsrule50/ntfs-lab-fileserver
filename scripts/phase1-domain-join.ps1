@@ -1,16 +1,7 @@
 # =============================================================================
 # Lab 3 - Phase 1: Domain Join
 # Runs on: CLIENT01 and FS01
-#
-# SECURITY: The domain admin password is NOT stored in this script.
-# It is retrieved from Azure Key Vault by run-lab3.ps1 and passed in
-# as a parameter at execution time.
 # =============================================================================
-param(
-    [Parameter(Mandatory = $true)]
-    [string]$AdminPassword
-)
-
 Set-ExecutionPolicy -ExecutionPolicy Bypass -Scope Process -Force
 Write-Host "=== Phase 1: Joining Domain ===" -ForegroundColor Cyan
 
@@ -35,8 +26,8 @@ if (-not $resolved) {
 Write-Host "  [+] lab.local resolved successfully" -ForegroundColor Green
 
 $domainCred = New-Object PSCredential(
-    "LAB\azureadmin",
-    (ConvertTo-SecureString $AdminPassword -AsPlainText -Force)
+    "azureadmin@lab.local",
+    (ConvertTo-SecureString "YourStrongPassword123!" -AsPlainText -Force)
 )
 Add-Computer -DomainName "lab.local" -Credential $domainCred -Restart -Force
 Write-Host "=== Phase 1 Complete - VM rebooting to complete domain join ===" -ForegroundColor Cyan
