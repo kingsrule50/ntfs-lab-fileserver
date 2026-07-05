@@ -2,6 +2,8 @@
 # Lab 3 - Phase 1: Domain Join
 # Runs on: CLIENT01 and FS01
 # =============================================================================
+param([string]$AdminPassword)
+
 Set-ExecutionPolicy -ExecutionPolicy Bypass -Scope Process -Force
 Write-Host "=== Phase 1: Joining Domain ===" -ForegroundColor Cyan
 
@@ -27,7 +29,9 @@ Write-Host "  [+] lab.local resolved successfully" -ForegroundColor Green
 
 $domainCred = New-Object PSCredential(
     "azureadmin@lab.local",
-    (ConvertTo-SecureString "YourStrongPassword123!" -AsPlainText -Force)
+    (ConvertTo-SecureString $AdminPassword -AsPlainText -Force)
 )
 Add-Computer -DomainName "lab.local" -Credential $domainCred -Restart -Force
 Write-Host "=== Phase 1 Complete - VM rebooting to complete domain join ===" -ForegroundColor Cyan
+
+

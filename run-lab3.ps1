@@ -17,6 +17,20 @@
 
 $rg = "RG-FileServerLab"
 
+# -----------------------------------------------------------------------------
+# SECURITY: Credentials are retrieved from Azure Key Vault at runtime.
+# No passwords are stored in this repository.
+# -----------------------------------------------------------------------------
+$kvName = az keyvault list --resource-group $rg --query "[0].name" -o tsv
+if (-not $kvName) {
+    throw "No Key Vault found in resource group '$rg'. Deploy Lab 1 first."
+}
+$adminPassword = az keyvault secret show --vault-name $kvName --name "vm-admin-password" --query "value" -o tsv
+if (-not $adminPassword) {
+    throw "Could not retrieve 'vm-admin-password' from Key Vault '$kvName'."
+}
+Write-Host "  [+] Credentials retrieved from Key Vault: $kvName" -ForegroundColor Green
+
 function Write-PhaseHeader {
     param([string]$Phase, [string]$Title, [string]$VM = "")
     Write-Host ""
@@ -27,15 +41,26 @@ function Write-PhaseHeader {
 }
 
 function Invoke-VMScript {
-    param([string]$VMName, [string]$ScriptPath)
-    $fullPath = (Resolve-Path $ScriptPath).Path
-    $result = az vm run-command invoke `
-        --resource-group $rg `
-        --name $VMName `
-        --command-id RunPowerShellScript `
-        --scripts "@$fullPath" `
-        --output json `
-        --only-show-errors | ConvertFrom-Json
+    param(
+        [string]$VMName,
+        [string]$ScriptPath,
+        [string[]]$Parameters = @()
+    )
+    $fullPath = (Resolve-Path $ScriptPath -ErrorAction Stop).Path
+    $azArgs = @(
+        "vm", "run-command", "invoke",
+        "--resource-group", $rg,
+        "--name", $VMName,
+        "--command-id", "RunPowerShellScript",
+        "--scripts", "@$fullPath",
+        "--output", "json",
+        "--only-show-errors"
+    )
+    if ($Parameters.Count -gt 0) {
+        $azArgs += "--parameters"
+        $azArgs += $Parameters
+    }
+    $result = az @azArgs | ConvertFrom-Json
     $stdout = $result.value | Where-Object { $_.code -like "*StdOut*" } | Select-Object -ExpandProperty message
     $stderr = $result.value | Where-Object { $_.code -like "*StdErr*" } | Select-Object -ExpandProperty message
     if ($stdout) { Write-Host $stdout -ForegroundColor White }
@@ -54,11 +79,11 @@ function Wait-ForNext {
 Write-PhaseHeader -Phase "PHASE 1" -Title "Domain Join CLIENT01 and FS01"
 
 Write-Host "Joining CLIENT01 to lab.local domain..." -ForegroundColor Yellow
-Invoke-VMScript -VMName "CLIENT01" -ScriptPath "./scripts/phase1-domain-join.ps1"
+Invoke-VMScript -VMName "CLIENT01" -ScriptPath "./scripts/phase1-domain-join.ps1" -Parameters @("AdminPassword=$adminPassword")
 
 Write-Host ""
 Write-Host "Joining FS01 to lab.local domain..." -ForegroundColor Yellow
-Invoke-VMScript -VMName "FS01" -ScriptPath "./scripts/phase1-domain-join.ps1"
+Invoke-VMScript -VMName "FS01" -ScriptPath "./scripts/phase1-domain-join.ps1" -Parameters @("AdminPassword=$adminPassword")
 
 Write-Host ""
 Write-Host "Waiting 90s for VMs to reboot and complete domain join..." -ForegroundColor Yellow
@@ -106,5 +131,5 @@ Write-Host " Test Access from CLIENT01:" -ForegroundColor Cyan
 Write-Host "  sarah.jones --> \\FS01\Finance (Modify) \\FS01\HR (Denied)" -ForegroundColor White
 Write-Host "  tom.davis   --> \\FS01\Sales (Modify)   \\FS01\Finance (Denied)" -ForegroundColor White
 Write-Host "  john.smith  --> \\FS01\IT (Full Control) all shares" -ForegroundColor White
-Write-Host "  Password: P@ssw0rd123!" -ForegroundColor White
+Write-Host "  Test user password: retrieve from Key Vault or Lab 2 documentation" -ForegroundColor White
 Write-Host "============================================================" -ForegroundColor Green
