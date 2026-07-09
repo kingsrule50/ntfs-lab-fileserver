@@ -4,6 +4,15 @@
 ![Windows Server](https://img.shields.io/badge/Windows_Server-2025-0078D6?logo=windows)
 ![NTFS](https://img.shields.io/badge/NTFS-Access_Control-0078D6?logo=microsoft)
 
+## 🎥 Lab Demo
+
+*Watch the full lab walkthrough (7 min):*
+
+
+https://github.com/user-attachments/assets/96900413-1f97-4b0b-8f32-6ef559b8ce89
+
+
+
 ## Overview
 
 This is the third and final lab in the series. Building on the Active Directory environment configured in Lab 2, I deploy a **department-based SMB file server** with granular NTFS permissions enforcing least-privilege access control.
